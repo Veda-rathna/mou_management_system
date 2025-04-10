@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}{{ mou.title }} - MOU Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>MOU Details</h1>
+    <div>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+        {% if mou.file_path %}
+        <a href="{{ url_for('admin.download_mou', id=mou.id, file_type='original') }}" class="btn btn-outline-primary">Download Original</a>
+        {% endif %}
+        {% if mou.signed_file_path %}
+        <a href="{{ url_for('admin.download_mou', id=mou.id, file_type='signed') }}" class="btn btn-outline-success">Download Signed</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">{{ mou.title }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Party A</h6>
+                        <p>{{ mou.party_a.name }}</p>
+                        <p><small class="text-muted">{{ mou.party_a.email }}</small></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Party B</h6>
+                        <p>{{ mou.party_b.name if mou.party_b else 'Pending' }}</p>
+                        <p><small class="text-muted">{{ mou.party_b.email if mou.party_b else '' }}</small></p>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Start Date</h6>
+                        <p>{{ mou.start_date.strftime('%Y-%m-%d') if mou.start_date else 'Not set' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>End Date</h6>
+                        <p>
+                            {% if mou.end_date %}
+                                {{ mou.end_date.strftime('%Y-%m-%d') }}
+                                {% if mou.days_until_expiry() is not none and mou.days_until_expiry() <= 30 and mou.days_until_expiry() > 0 %}
+                                    <span class="badge bg-warning">{{ mou.days_until_expiry() }} days left</span>
+                                {% elif mou.is_expired() %}
+                                    <span class="badge bg-danger">Expired</span>
+                                {% endif %}
+                            {% else %}
+                                Not set
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Status</h6>
+                        <p>
+                            <span class="badge bg-{{ 'success' if mou.status == 'active' else 'warning' if mou.status == 'pending' else 'danger' }}">
+                                {{ mou.status }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Signature Status</h6>
+                        <p>
+                            <span class="badge bg-{{ 'success' if mou.signature_status == 'verified' else 'warning' if mou.signature_status == 'signed' else 'danger' if mou.signature_status == 'suspicious' else 'secondary' }}">
+                                {{ mou.signature_status }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                
+                {% if mou.status == 'pending' and not mou.file_path %}
+                <div class="alert alert-info">
+                    <h6>Upload Link</h6>
+                    <p>Link expires on: {{ mou.link_expiry.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="uploadLink" value="{{ url_for('upload.upload_mou', link_id=mou.upload_link_id, _external=True) }}" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard()">Copy</button>
+                    </div>
+                    <div class="mt-2">
+                        <form method="POST" action="{{ url_for('admin.resend_upload_link', id=mou.id) }}">
+                            <button type="submit" class="btn btn-sm btn-primary">Regenerate & Resend Link</button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Extracted Clauses</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Validity Clause</h6>
+                    <div class="p-3 bg-light rounded">
+                        {{ mou.validity_clause or 'Not extracted' }}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Termination Clause</h6>
+                    <div class="p-3 bg-light rounded">
+                        {{ mou.termination_clause or 'Not extracted' }}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Confidentiality Clause</h6>
+                    <div class="p-3 bg-light rounded">
+                        {{ mou.confidentiality_clause or 'Not extracted' }}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Governing Law Clause</h6>
+                    <div class="p-3 bg-light rounded">
+                        {{ mou.governing_law_clause or 'Not extracted' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Activity Log</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for log in mou.audit_logs|sort(attribute='timestamp', reverse=True) %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h6 class="timeline-title">{{ log.action|title }}</h6>
+                            <p class="timeline-text">{{ log.details }}</p>
+                            <p class="timeline-date">
+                                <small class="text-muted">
+                                    {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% if log.user %}by {{ log.user.username }}{% endif %}
+                                </small>
+                            </p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No activity recorded yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        {% if mou.status == 'active' and not mou.is_expired() %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Actions</h5>
+            </div>
+            <div class="card-body">
+                <button type="button" class="btn btn-warning mb-2 w-100" data-bs-toggle="modal" data-bs-target="#terminateModal">
+                    Terminate MOU
+                </button>
+                <button type="button" class="btn btn-primary mb-2 w-100" data-bs-toggle="modal" data-bs-target="#renewModal">
+                    Prepare Renewal
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Terminate Modal -->
+<div class="modal fade" id="terminateModal" tabindex="-1" aria-labelledby="terminateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="terminateModalLabel">Terminate MOU</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to terminate this MOU? This action cannot be undone.</p>
+                <form id="terminateForm" method="POST" action="{{ url_for('admin.terminate_mou', id=mou.id) }}">
+                    <div class="mb-3">
+                        <label for="terminationReason" class="form-label">Reason for Termination</label>
+                        <textarea class="form-control" id="terminationReason" name="reason" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="terminateForm" class="btn btn-danger">Terminate MOU</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Renew Modal -->
+<div class="modal fade" id="renewModal" tabindex="-1" aria-labelledby="renewModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="renewModalLabel">Prepare MOU Renewal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>This will create a new MOU based on the current one with a new validity period.</p>
+                <form id="renewForm" method="POST" action="{{ url_for('admin.prepare_renewal', id=mou.id) }}">
+                    <div class="mb-3">
+                        <label for="renewalPeriod" class="form-label">Renewal Period (Years)</label>
+                        <select class="form-select" id="renewalPeriod" name="period" required>
+                            <option value="1">1 Year</option>
+                            <option value="2">2 Years</option>
+                            <option value="3">3 Years</option>
+                            <option value="5">5 Years</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="renewalNotes" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="renewalNotes" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="renewForm" class="btn btn-primary">Prepare Renewal</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyToClipboard() {
+    var copyText = document.getElementById("uploadLink");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyText.value);
+    
+    // Show a temporary tooltip
+    var button = copyText.nextElementSibling;
+    var originalText = button.innerText;
+    button.innerText = "Copied!";
+    setTimeout(function() {
+        button.innerText = originalText;
+    }, 2000);
+}
+</script>
+{% endblock %}
