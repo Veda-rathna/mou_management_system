@@ -1,0 +1,32 @@
+MOU Expiry Reminder - {{ total_count }} MOUs expiring soon
+
+Dear Administrator,
+
+This is an automated reminder about MOUs that are expiring soon.
+
+{% if urgent_mous %}
+URGENT - Expiring within 30 days ({{ urgent_mous|length }}):
+{% for mou in urgent_mous %}
+- {{ mou.title }} ({{ mou.partner_name }}) - Expires: {{ mou.expiry_date|date:"M d, Y" }}
+{% endfor %}
+
+{% endif %}
+{% if warning_mous %}
+WARNING - Expiring within 30-60 days ({{ warning_mous|length }}):
+{% for mou in warning_mous %}
+- {{ mou.title }} ({{ mou.partner_name }}) - Expires: {{ mou.expiry_date|date:"M d, Y" }}
+{% endfor %}
+
+{% endif %}
+{% if info_mous %}
+INFO - Expiring within 60-90 days ({{ info_mous|length }}):
+{% for mou in info_mous %}
+- {{ mou.title }} ({{ mou.partner_name }}) - Expires: {{ mou.expiry_date|date:"M d, Y" }}
+{% endfor %}
+
+{% endif %}
+
+Please review these MOUs and take appropriate action.
+
+Best regards,
+MOU Management System

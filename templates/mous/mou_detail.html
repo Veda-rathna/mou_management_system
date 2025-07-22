@@ -1,0 +1,416 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ mou.title }} - MOU Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ mou.title }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'mous:mou_edit' mou.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="generateShareLink()">
+                <i class="fas fa-share"></i> Generate Share Link
+            </button>
+            {% if mou.status == 'pending' %}
+            <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-success" onclick="approveMou()">
+                    <i class="fas fa-check"></i> Approve
+                </button>
+                <button type="button" class="btn btn-sm btn-danger" onclick="rejectMou()">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- MOU Details -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">MOU Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Title:</strong></td>
+                                <td>{{ mou.title }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Partner:</strong></td>
+                                <td>{{ mou.partner_name }}</td>
+                            </tr>
+                            {% if mou.partner_organization %}
+                            <tr>
+                                <td><strong>Organization:</strong></td>
+                                <td>{{ mou.partner_organization }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if mou.partner_contact %}
+                            <tr>
+                                <td><strong>Contact:</strong></td>
+                                <td><a href="mailto:{{ mou.partner_contact }}">{{ mou.partner_contact }}</a></td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Status & Dates</h6>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Status:</strong></td>
+                                <td>
+                                    <span class="badge 
+                                        {% if mou.status == 'approved' %}bg-success
+                                        {% elif mou.status == 'pending' %}bg-warning
+                                        {% elif mou.status == 'expired' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ mou.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Expiry Date:</strong></td>
+                                <td>
+                                    {{ mou.expiry_date|date:"M d, Y" }}
+                                    {% if mou.expires_soon %}
+                                    <span class="text-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> Expires Soon
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Created:</strong></td>
+                                <td>{{ mou.created_at|date:"M d, Y g:i A" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Updated:</strong></td>
+                                <td>{{ mou.updated_at|date:"M d, Y g:i A" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if mou.description %}
+                <div class="mt-3">
+                    <h6>Description</h6>
+                    <p>{{ mou.description|linebreaks }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- PDF Viewer -->
+        {% if mou.pdf_file %}
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">MOU Document</h5>
+                <div>
+                    <a href="{% url 'mous:view_pdf' mou.pk %}" class="btn btn-sm btn-outline-primary me-2" target="_blank">
+                        <i class="fas fa-external-link-alt"></i> Open in New Tab
+                    </a>
+                    <a href="{{ mou.pdf_file.url }}" class="btn btn-sm btn-outline-success" download>
+                        <i class="fas fa-download"></i> Download PDF
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="pdf-viewer-container" style="position: relative; width: 100%; height: 600px; border: 1px solid #dee2e6; border-radius: 0.375rem; overflow: hidden;">
+                    <!-- Primary: Object tag with custom endpoint -->
+                    <object data="{% url 'mous:view_pdf' mou.pk %}" type="application/pdf" width="100%" height="100%" id="pdf-object">
+                        <!-- Fallback: Embed tag with media URL -->
+                        <embed src="{{ mou.pdf_file.url }}" type="application/pdf" width="100%" height="100%" id="pdf-embed">
+                            <!-- Final fallback: Manual links -->
+                            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center p-4">
+                                <i class="fas fa-file-pdf fa-4x text-muted mb-3"></i>
+                                <h5 class="text-muted mb-3">PDF Preview Not Available</h5>
+                                <p class="text-muted mb-3">Your browser doesn't support inline PDF viewing.</p>
+                                <div>
+                                    <a href="{% url 'mous:view_pdf' mou.pk %}" class="btn btn-primary me-2" target="_blank">
+                                        <i class="fas fa-external-link-alt me-1"></i> View in New Tab
+                                    </a>
+                                    <a href="{{ mou.pdf_file.url }}" class="btn btn-outline-primary" download>
+                                        <i class="fas fa-download me-1"></i> Download PDF
+                                    </a>
+                                </div>
+                            </div>
+                        </embed>
+                    </object>
+                </div>
+                
+                <!-- Alternative viewer toggle -->
+                <div class="mt-3 text-center">
+                    <small class="text-muted">
+                        PDF not displaying correctly? 
+                        <a href="#" onclick="switchToIframe()" class="text-decoration-none">Try iframe viewer</a> |
+                        <a href="{% url 'mous:view_pdf' mou.pk %}" target="_blank" class="text-decoration-none">Open in new tab</a>
+                    </small>
+                </div>
+                
+                <!-- JavaScript to enhance PDF viewing experience -->
+                <script>
+                    function switchToIframe() {
+                        const container = document.querySelector('.pdf-viewer-container');
+                        container.innerHTML = `
+                            <iframe src="{% url 'mous:view_pdf' mou.pk %}" width="100%" height="100%" style="border: none;" id="pdf-iframe">
+                                <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center p-4">
+                                    <i class="fas fa-file-pdf fa-4x text-muted mb-3"></i>
+                                    <h5 class="text-muted mb-3">PDF Preview Not Available</h5>
+                                    <p class="text-muted mb-3">Your browser doesn't support inline PDF viewing.</p>
+                                    <div>
+                                        <a href="{% url 'mous:view_pdf' mou.pk %}" class="btn btn-primary me-2" target="_blank">
+                                            <i class="fas fa-external-link-alt me-1"></i> View in New Tab
+                                        </a>
+                                        <a href="{{ mou.pdf_file.url }}" class="btn btn-outline-primary" download>
+                                            <i class="fas fa-download me-1"></i> Download PDF
+                                        </a>
+                                    </div>
+                                </div>
+                            </iframe>
+                        `;
+                    }
+                    
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Add loading indicator
+                        const container = document.querySelector('.pdf-viewer-container');
+                        const loadingDiv = document.createElement('div');
+                        loadingDiv.innerHTML = '<div class="d-flex justify-content-center align-items-center h-100"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading PDF...</span></div></div>';
+                        loadingDiv.className = 'position-absolute top-0 start-0 w-100 h-100 bg-white';
+                        loadingDiv.style.zIndex = '10';
+                        loadingDiv.id = 'pdf-loading';
+                        container.appendChild(loadingDiv);
+                        
+                        // Remove loading indicator after PDF loads or timeout
+                        setTimeout(function() {
+                            const loading = document.getElementById('pdf-loading');
+                            if (loading && loading.parentNode) {
+                                loading.remove();
+                            }
+                        }, 3000);
+                        
+                        // Monitor for object/embed load events
+                        const pdfObject = document.getElementById('pdf-object');
+                        const pdfEmbed = document.getElementById('pdf-embed');
+                        
+                        if (pdfObject) {
+                            pdfObject.addEventListener('load', function() {
+                                console.log('PDF loaded via object tag');
+                                const loading = document.getElementById('pdf-loading');
+                                if (loading) loading.remove();
+                            });
+                        }
+                        
+                        if (pdfEmbed) {
+                            pdfEmbed.addEventListener('load', function() {
+                                console.log('PDF loaded via embed tag');
+                                const loading = document.getElementById('pdf-loading');
+                                if (loading) loading.remove();
+                            });
+                        }
+                    });
+                </script>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Extracted Clauses -->
+        {% if mou.clauses.clauses %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Extracted Clauses</h5>
+            </div>
+            <div class="card-body">
+                {% for clause in mou.clauses.clauses %}
+                <div class="mb-3 p-3 bg-light rounded">
+                    <p>{{ clause }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'mous:mou_submissions' mou.pk %}" class="btn btn-outline-info">
+                        <i class="fas fa-eye"></i> View Submissions
+                    </a>
+                    {% if share_links %}
+                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#shareLinks">
+                        <i class="fas fa-link"></i> View Share Links
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Share Links -->
+        {% if share_links %}
+        <div class="collapse" id="shareLinks">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Active Share Links</h6>
+                </div>
+                <div class="card-body">
+                    {% for link in share_links %}
+                    <div class="mb-3 p-2 border rounded">
+                        <small class="text-muted">
+                            Created: {{ link.created_at|date:"M d, Y" }}<br>
+                            Expires: {{ link.expires_at|date:"M d, Y" }}<br>
+                            Accessed: {{ link.access_count }} times
+                        </small>
+                        <br>
+                        <a href="{% url 'mous:mou_sign' link.token %}" class="btn btn-sm btn-outline-primary mt-2" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> Open Link
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Activity Log -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Activity Log</h6>
+            </div>
+            <div class="card-body activity-log">
+                {% for activity in activity_logs %}
+                <div class="d-flex align-items-center py-2 border-bottom">
+                    <div class="flex-shrink-0 me-3">
+                        {% if activity.action == 'created' %}
+                            <i class="fas fa-plus text-success"></i>
+                        {% elif activity.action == 'signed' %}
+                            <i class="fas fa-signature text-primary"></i>
+                        {% elif activity.action == 'approved' %}
+                            <i class="fas fa-check text-success"></i>
+                        {% elif activity.action == 'accessed' %}
+                            <i class="fas fa-eye text-info"></i>
+                        {% else %}
+                            <i class="fas fa-circle text-secondary"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">{{ activity.get_action_display }}</h6>
+                        <small class="text-muted">
+                            {% if activity.user %}
+                                by {{ activity.user.username }}
+                            {% elif activity.user_name %}
+                                by {{ activity.user_name }}
+                            {% endif %}
+                            <br>{{ activity.timestamp|date:"M d, Y g:i A" }}
+                        </small>
+                        {% if activity.description %}
+                        <br><small class="text-muted">{{ activity.description }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted">No activities yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- Share Link Modal -->
+<div class="modal fade" id="shareLinkModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Share Link Generated</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Share this link with external partners to sign the MOU:</p>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="shareUrl" readonly>
+                    <button class="btn btn-outline-secondary" type="button" onclick="copyShareLink()">
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                </div>
+                <small class="text-muted mt-2 d-block">Link expires in 7 days</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approval Forms -->
+<form id="approvalForm" action="{% url 'mous:mou_approve' mou.pk %}" method="post" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="approvalAction">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function generateShareLink() {
+    fetch('{% url "mous:generate_share_link" mou.pk %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('shareUrl').value = data.share_url;
+            const modal = new bootstrap.Modal(document.getElementById('shareLinkModal'));
+            modal.show();
+        } else {
+            alert('Error generating share link: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error generating share link');
+        console.error('Error:', error);
+    });
+}
+
+function copyShareLink() {
+    const shareUrl = document.getElementById('shareUrl');
+    shareUrl.select();
+    shareUrl.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(shareUrl.value);
+    
+    const button = event.target.closest('button');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    setTimeout(() => {
+        button.innerHTML = originalText;
+    }, 2000);
+}
+
+function approveMou() {
+    if (confirm('Are you sure you want to approve this MOU?')) {
+        document.getElementById('approvalAction').value = 'approve';
+        document.getElementById('approvalForm').submit();
+    }
+}
+
+function rejectMou() {
+    if (confirm('Are you sure you want to reject this MOU?')) {
+        document.getElementById('approvalAction').value = 'reject';
+        document.getElementById('approvalForm').submit();
+    }
+}
+</script>
+{% endblock %}

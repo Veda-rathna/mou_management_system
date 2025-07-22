@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign MOU - {{ mou.title }}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        .signature-pad {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            cursor: crosshair;
+        }
+        .signature-container {
+            position: relative;
+        }
+        .clear-signature {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        body {
+            background-color: #f8f9fa;
+        }
+        .main-card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+    </style>
+</head>
+<body>
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Header -->
+                <div class="text-center mb-4">
+                    <h1 class="h3 text-primary">
+                        <i class="fas fa-file-signature me-2"></i>
+                        MOU Signature Request
+                    </h1>
+                    <p class="text-muted">You have been invited to sign the following MOU</p>
+                </div>
+
+                <!-- MOU Information -->
+                <div class="card main-card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">{{ mou.title }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>MOU Details</h6>
+                                <p><strong>Partner:</strong> {{ mou.partner_name }}</p>
+                                {% if mou.partner_organization %}
+                                <p><strong>Organization:</strong> {{ mou.partner_organization }}</p>
+                                {% endif %}
+                                <p><strong>Expiry Date:</strong> {{ mou.expiry_date|date:"F d, Y" }}</p>
+                                <p><strong>Status:</strong> 
+                                    <span class="badge bg-{{ mou.status|yesno:'success,warning,secondary' }}">
+                                        {{ mou.get_status_display }}
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                {% if mou.description %}
+                                <h6>Description</h6>
+                                <p>{{ mou.description }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if mou.pdf_file %}
+                        <div class="mt-3">
+                            <h6>MOU Document</h6>
+                            <a href="{{ mou.pdf_file.url }}" class="btn btn-outline-primary" target="_blank">
+                                <i class="fas fa-file-pdf me-1"></i> View MOU Document
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Signature Form -->
+                <div class="card main-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-signature me-2"></i>
+                            Partner Information & Signature
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" enctype="multipart/form-data" id="signatureForm">
+                            {% csrf_token %}
+                            
+                            <!-- Partner Information -->
+                            <div class="mb-4">
+                                <h6 class="text-primary">Your Information</h6>
+                                <hr>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.partner_name.id_for_label }}" class="form-label">
+                                                Full Name <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.partner_name }}
+                                            {% if form.partner_name.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.partner_name.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.partner_organization.id_for_label }}" class="form-label">
+                                                Organization <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.partner_organization }}
+                                            {% if form.partner_organization.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.partner_organization.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.partner_email.id_for_label }}" class="form-label">
+                                                Email Address <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.partner_email }}
+                                            {% if form.partner_email.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.partner_email.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.partner_phone.id_for_label }}" class="form-label">
+                                                Phone Number
+                                            </label>
+                                            {{ form.partner_phone }}
+                                            {% if form.partner_phone.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in form.partner_phone.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Document Upload -->
+                            <div class="mb-4">
+                                <h6 class="text-primary">Updated Document (Optional)</h6>
+                                <hr>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.updated_pdf.id_for_label }}" class="form-label">
+                                        Upload Updated MOU PDF
+                                    </label>
+                                    {{ form.updated_pdf }}
+                                    {% if form.updated_pdf.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.updated_pdf.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        If you have made changes to the MOU document, upload the updated version here (max 10MB).
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Digital Signature -->
+                            <div class="mb-4">
+                                <h6 class="text-primary">Digital Signature</h6>
+                                <hr>
+                                
+                                <div class="signature-container">
+                                    <canvas id="signaturePad" class="signature-pad bg-white" width="600" height="200"></canvas>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary clear-signature" onclick="clearSignature()">
+                                        <i class="fas fa-eraser"></i> Clear
+                                    </button>
+                                </div>
+                                <div class="form-text mt-2">
+                                    Please draw your signature in the box above using your mouse or touch screen.
+                                </div>
+                                {{ form.signature_data }}
+                            </div>
+
+                            <!-- Notes -->
+                            <div class="mb-4">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                    Additional Notes
+                                </label>
+                                {{ form.notes }}
+                                {% if form.notes.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.notes.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Agreement Checkbox -->
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="agreementCheck" required>
+                                    <label class="form-check-label" for="agreementCheck">
+                                        I agree to the terms and conditions outlined in this MOU and confirm that the information provided is accurate. <span class="text-danger">*</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                    <i class="fas fa-signature me-2"></i> Sign MOU
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        This is a secure link for signing the MOU. 
+                        Link expires on {{ share_link.expires_at|date:"F d, Y" }}.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Signature pad functionality
+        const canvas = document.getElementById('signaturePad');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let hasSignature = false;
+
+        // Set canvas size
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        // Mouse events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch events
+        canvas.addEventListener('touchstart', handleTouch, { passive: false });
+        canvas.addEventListener('touchmove', handleTouch, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#000';
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            hasSignature = true;
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            ctx.beginPath();
+        }
+
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                              e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+
+        function clearSignature() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasSignature = false;
+            document.getElementById('id_signature_data').value = '';
+        }
+
+        // Form submission
+        document.getElementById('signatureForm').addEventListener('submit', function(e) {
+            if (hasSignature) {
+                const signatureData = canvas.toDataURL();
+                document.getElementById('id_signature_data').value = signatureData;
+            } else {
+                e.preventDefault();
+                alert('Please provide your signature before submitting.');
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>
