@@ -77,7 +77,7 @@ class MOUDetailView(LoginRequiredMixin, DetailView):
         return MOU.objects.select_related('created_by').prefetch_related(
             'ai_analysis',
             'ai_analysis__clauses',
-            'ai_analysis__risk_flags',
+            'risk_flags',
             'activity_logs',
             'share_links'
         )
