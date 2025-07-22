@@ -10,6 +10,9 @@
             <a href="{% url 'mous:mou_create' %}" class="btn btn-sm btn-primary">
                 <i class="fas fa-plus"></i> Create New MOU
             </a>
+            <button type="button" class="btn btn-sm btn-outline-info" onclick="triggerBulkAIAnalysis()">
+                <i class="fas fa-brain"></i> Analyze All MOUs
+            </button>
         </div>
     </div>
 </div>
@@ -115,6 +118,32 @@
                     </span>
                     {% endif %}
                 </p>
+
+                <!-- AI Analysis Status -->
+                {% if mou.ai_analysis %}
+                <div class="mb-2">
+                    <small class="text-muted">
+                        <i class="fas fa-brain me-1"></i>AI Analysis: 
+                        <span class="badge 
+                            {% if mou.ai_analysis.risk_level == 'low' %}bg-success
+                            {% elif mou.ai_analysis.risk_level == 'medium' %}bg-warning
+                            {% elif mou.ai_analysis.risk_level == 'high' %}bg-danger
+                            {% else %}bg-secondary{% endif %} ms-1">
+                            {{ mou.ai_analysis.risk_level|title }} Risk ({{ mou.ai_analysis.overall_risk_score|floatformat:1 }}/10)
+                        </span>
+                    </small>
+                </div>
+                {% else %}
+                <div class="mb-2">
+                    <small class="text-muted">
+                        <i class="fas fa-brain me-1 text-muted"></i>No AI analysis
+                        <button type="button" class="btn btn-xs btn-outline-primary ms-2" 
+                                onclick="triggerSingleAIAnalysis({{ mou.id }}, this)" title="Run AI Analysis">
+                            <i class="fas fa-play"></i>
+                        </button>
+                    </small>
+                </div>
+                {% endif %}
                 
                 {% if mou.description %}
                 <p class="card-text text-muted">{{ mou.description|truncatewords:15 }}</p>
@@ -173,4 +202,81 @@
     </ul>
 </nav>
 {% endif %}
+
+<script>
+function triggerBulkAIAnalysis() {
+    if (!confirm('This will start AI analysis for all MOUs that don\'t have analysis yet. This may take some time. Continue?')) {
+        return;
+    }
+    
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    // Show loading state
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting...';
+    
+    fetch('/api/bulk-analyze/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            button.innerHTML = '<i class="fas fa-check me-2 text-success"></i>Started!';
+            alert(`AI analysis started for ${data.count} MOUs. Check individual MOUs for progress.`);
+            setTimeout(() => {
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }, 3000);
+        } else {
+            throw new Error(data.message || 'Bulk analysis failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        button.disabled = false;
+        button.innerHTML = originalText;
+        alert('Failed to start bulk AI analysis: ' + error.message);
+    });
+}
+
+function triggerSingleAIAnalysis(mouId, button) {
+    event.stopPropagation(); // Prevent card click
+    
+    const originalText = button.innerHTML;
+    
+    // Show loading state
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    fetch(`/api/mous/${mouId}/analyze/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            button.innerHTML = '<i class="fas fa-check text-success"></i>';
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            throw new Error(data.message || 'Analysis failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        button.disabled = false;
+        button.innerHTML = originalText;
+        alert('Failed to start AI analysis: ' + error.message);
+    });
+}
+</script>
 {% endblock %}

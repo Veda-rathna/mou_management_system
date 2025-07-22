@@ -236,6 +236,192 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- AI Analysis Results -->
+        {% if has_ai_analysis and ai_analysis %}
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-brain me-2 text-primary"></i>AI Analysis Results
+                </h5>
+                <span class="badge 
+                    {% if ai_analysis.risk_level == 'low' %}bg-success
+                    {% elif ai_analysis.risk_level == 'medium' %}bg-warning
+                    {% elif ai_analysis.risk_level == 'high' %}bg-danger
+                    {% else %}bg-secondary{% endif %}">
+                    {{ ai_analysis.risk_level|title }} Risk
+                </span>
+            </div>
+            <div class="card-body">
+                <!-- Overall Risk Score -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <h6 class="text-muted">Overall Risk Score</h6>
+                            <div class="display-4 
+                                {% if ai_analysis.overall_risk_score <= 3 %}text-success
+                                {% elif ai_analysis.overall_risk_score <= 7 %}text-warning
+                                {% else %}text-danger{% endif %}">
+                                {{ ai_analysis.overall_risk_score|floatformat:1 }}/10
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <h6 class="text-muted">Compliance Status</h6>
+                            <span class="badge fs-6 
+                                {% if ai_analysis.compliance_status == 'compliant' %}bg-success
+                                {% elif ai_analysis.compliance_status == 'review_required' %}bg-warning
+                                {% elif ai_analysis.compliance_status == 'non_compliant' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ ai_analysis.get_compliance_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Summary -->
+                {% if ai_analysis.analysis_data.summary %}
+                <div class="mb-3">
+                    <h6>Summary</h6>
+                    <p class="text-muted">{{ ai_analysis.analysis_data.summary }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Key Recommendations -->
+                {% if ai_analysis.recommendations %}
+                <div class="mb-3">
+                    <h6>Key Recommendations</h6>
+                    <ul class="list-unstyled">
+                        {% for rec in ai_analysis.recommendations %}
+                        <li class="mb-2">
+                            <i class="fas fa-lightbulb text-warning me-2"></i>{{ rec }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Risk Flags -->
+                {% if mou.risk_flags.all %}
+                <div class="mb-3">
+                    <h6>Risk Flags</h6>
+                    {% for flag in mou.risk_flags.all %}
+                    <div class="alert alert-sm 
+                        {% if flag.severity == 'high' %}alert-danger
+                        {% elif flag.severity == 'medium' %}alert-warning
+                        {% else %}alert-info{% endif %} mb-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>{{ flag.get_flag_type_display }}</strong><br>
+                                <small>{{ flag.description }}</small>
+                            </div>
+                            <span class="badge 
+                                {% if flag.severity == 'high' %}bg-danger
+                                {% elif flag.severity == 'medium' %}bg-warning
+                                {% else %}bg-info{% endif %}">
+                                {{ flag.severity|title }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Clause Analysis Preview -->
+                {% if ai_analysis.clauses.all %}
+                <div class="mb-3">
+                    <h6>Clause Analysis 
+                        <small class="text-muted">({{ ai_analysis.clauses.count }} clauses analyzed)</small>
+                    </h6>
+                    <div class="row">
+                        {% for clause in ai_analysis.clauses.all|slice:":3" %}
+                        <div class="col-md-4 mb-2">
+                            <div class="card card-body">
+                                <small class="text-muted">{{ clause.clause_type|title }}</small>
+                                <div class="progress mt-1" style="height: 8px;">
+                                    <div class="progress-bar 
+                                        {% if clause.risk_score <= 3 %}bg-success
+                                        {% elif clause.risk_score <= 7 %}bg-warning
+                                        {% else %}bg-danger{% endif %}" 
+                                        style="width: {{ clause.risk_score }}0%"></div>
+                                </div>
+                                <small class="text-muted mt-1">Risk: {{ clause.risk_score|floatformat:1 }}/10</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if ai_analysis.clauses.count > 3 %}
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#allClauses">
+                        View All {{ ai_analysis.clauses.count }} Clauses
+                    </button>
+                    <div class="collapse mt-3" id="allClauses">
+                        {% for clause in ai_analysis.clauses.all %}
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="card-title">{{ clause.clause_type|title }}</h6>
+                                        <p class="card-text small text-muted">{{ clause.content|truncatewords:20 }}</p>
+                                        {% if clause.issues %}
+                                        <div class="mt-2">
+                                            <small class="text-danger">Issues: {{ clause.issues|join:", " }}</small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="badge 
+                                            {% if clause.risk_score <= 3 %}bg-success
+                                            {% elif clause.risk_score <= 7 %}bg-warning
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ clause.risk_score|floatformat:1 }}/10
+                                        </div>
+                                        {% if clause.confidence_score %}
+                                        <br><small class="text-muted">{{ clause.confidence_score|floatformat:0 }}% confidence</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Analysis Metadata -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            Analyzed: {{ ai_analysis.analysis_date|date:"M d, Y g:i A" }}
+                        </small>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <small class="text-muted">
+                            <i class="fas fa-microchip me-1"></i>
+                            Model v{{ ai_analysis.model_version }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% elif has_ai_analysis == False %}
+        <div class="card mb-4 border-warning">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h5 class="mb-0">
+                    <i class="fas fa-brain me-2 text-warning"></i>AI Analysis
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No AI analysis available for this MOU yet.</p>
+                <button type="button" class="btn btn-outline-primary" onclick="triggerAIAnalysis({{ mou.id }})">
+                    <i class="fas fa-play me-2"></i>Run AI Analysis
+                </button>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Sidebar -->
@@ -411,6 +597,41 @@ function rejectMou() {
         document.getElementById('approvalAction').value = 'reject';
         document.getElementById('approvalForm').submit();
     }
+}
+
+function triggerAIAnalysis(mouId) {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    // Show loading state
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...';
+    
+    fetch(`/api/mous/${mouId}/analyze/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message and reload page after a short delay
+            button.innerHTML = '<i class="fas fa-check me-2 text-success"></i>Analysis Started!';
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            throw new Error(data.message || 'Analysis failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        button.disabled = false;
+        button.innerHTML = originalText;
+        alert('Failed to start AI analysis: ' + error.message);
+    });
 }
 </script>
 {% endblock %}

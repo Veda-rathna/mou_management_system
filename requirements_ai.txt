@@ -1,0 +1,30 @@
+# AI/ML Dependencies for MOU Management System
+# Add these to your existing requirements.txt
+
+# Core AI/ML libraries
+transformers>=4.21.0
+torch>=1.12.0
+sentence-transformers>=2.2.2
+
+# NLP libraries
+spacy>=3.4.0
+nltk>=3.7
+textblob>=0.17.1
+
+# Optional: OpenAI API integration (if you want to use GPT models)
+openai>=0.27.0
+
+# Additional dependencies for AI features
+scikit-learn>=1.1.0
+numpy>=1.21.0
+pandas>=1.3.0
+
+# Performance optimization
+accelerate>=0.12.0  # For faster transformers
+
+# For downloading spacy language models, run:
+# python -m spacy download en_core_web_sm
+
+# Installation command for AI features:
+# pip install transformers torch sentence-transformers spacy nltk textblob scikit-learn numpy pandas accelerate
+# python -m spacy download en_core_web_sm

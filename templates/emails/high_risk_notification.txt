@@ -1,0 +1,46 @@
+HIGH-RISK MOU ALERT
+===================
+
+⚠️ IMMEDIATE ATTENTION REQUIRED ⚠️
+
+An AI analysis has identified a high-risk MOU that requires immediate review.
+
+MOU DETAILS:
+-----------
+Title: {{ mou.title }}
+Partner: {{ mou.partner_name }} ({{ mou.partner_organization }})
+Status: {{ mou.get_status_display }}
+Created: {{ mou.created_at|date:"F d, Y" }}
+
+AI ANALYSIS RESULTS:
+-------------------
+Risk Score: {{ risk_score }}/10
+Risk Level: {{ risk_level }}
+
+{% if high_risk_clauses %}HIGH-RISK CLAUSES IDENTIFIED:
+{% for clause in high_risk_clauses %}
+• {{ clause.get_clause_type_display }} Clause (Risk: {{ clause.risk_score }}/10)
+  {{ clause.truncated_text }}
+  {% if clause.risk_factors %}Risk Factors:
+    {% for factor in clause.risk_factors %}
+    - {{ factor }}
+    {% endfor %}
+  {% endif %}
+
+{% endfor %}
+{% endif %}
+
+{% if recommendations %}AI RECOMMENDATIONS:
+{% for recommendation in recommendations %}
+• {{ recommendation }}
+{% endfor %}
+
+{% endif %}
+REVIEW LINK:
+-----------
+Please review the full MOU details at:
+http://{{ domain }}/mous/{{ mou.id }}/
+
+---
+This is an automated alert from the MOU Management System.
+Please review this document carefully before proceeding with approval.

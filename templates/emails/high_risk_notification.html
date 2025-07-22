@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>High-Risk MOU Alert</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #dc3545; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f8f9fa; }
+        .risk-score { font-size: 24px; font-weight: bold; color: #dc3545; }
+        .clause-list { background-color: white; padding: 15px; border-left: 4px solid #dc3545; margin: 10px 0; }
+        .recommendation { background-color: #fff3cd; border: 1px solid #ffeeba; padding: 10px; margin: 5px 0; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        .btn { background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ High-Risk MOU Detected</h1>
+            <p>Immediate attention required</p>
+        </div>
+        
+        <div class="content">
+            <h2>MOU Details</h2>
+            <table style="width: 100%; margin-bottom: 20px;">
+                <tr>
+                    <td><strong>Title:</strong></td>
+                    <td>{{ mou.title }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Partner:</strong></td>
+                    <td>{{ mou.partner_name }} ({{ mou.partner_organization }})</td>
+                </tr>
+                <tr>
+                    <td><strong>Status:</strong></td>
+                    <td>{{ mou.get_status_display }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Created:</strong></td>
+                    <td>{{ mou.created_at|date:"F d, Y" }}</td>
+                </tr>
+            </table>
+            
+            <h2>AI Analysis Results</h2>
+            <div style="text-align: center; margin: 20px 0;">
+                <div class="risk-score">Risk Score: {{ risk_score }}/10</div>
+                <p style="color: #dc3545; font-weight: bold;">{{ risk_level }} Risk Level</p>
+            </div>
+            
+            {% if high_risk_clauses %}
+            <h3>High-Risk Clauses Identified</h3>
+            {% for clause in high_risk_clauses %}
+            <div class="clause-list">
+                <strong>{{ clause.get_clause_type_display }} Clause</strong> (Risk: {{ clause.risk_score }}/10)
+                <p>{{ clause.truncated_text }}</p>
+                {% if clause.risk_factors %}
+                <ul>
+                    {% for factor in clause.risk_factors %}
+                    <li>{{ factor }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% endif %}
+            
+            {% if recommendations %}
+            <h3>AI Recommendations</h3>
+            {% for recommendation in recommendations %}
+            <div class="recommendation">
+                {{ recommendation }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="http://{{ domain }}/mous/{{ mou.id }}/" class="btn">Review MOU Details</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated alert from the MOU Management System.</p>
+            <p>Please review this document carefully before proceeding with approval.</p>
+        </div>
+    </div>
+</body>
+</html>

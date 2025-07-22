@@ -27,7 +27,7 @@ class MOUListView(LoginRequiredMixin, ListView):
     paginate_by = 12
 
     def get_queryset(self):
-        queryset = MOU.objects.all()
+        queryset = MOU.objects.select_related('created_by').prefetch_related('ai_analysis')
         
         # Search functionality
         search = self.request.GET.get('search')
@@ -73,6 +73,15 @@ class MOUDetailView(LoginRequiredMixin, DetailView):
     template_name = 'mous/mou_detail.html'
     context_object_name = 'mou'
 
+    def get_queryset(self):
+        return MOU.objects.select_related('created_by').prefetch_related(
+            'ai_analysis',
+            'ai_analysis__clauses',
+            'ai_analysis__risk_flags',
+            'activity_logs',
+            'share_links'
+        )
+
     def get_object(self, queryset=None):
         obj = super().get_object(queryset)
         # Log activity
@@ -88,6 +97,15 @@ class MOUDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['activity_logs'] = self.object.activity_logs.all()[:20]
         context['share_links'] = self.object.share_links.filter(is_active=True)
+        
+        # Add AI analysis data if available
+        try:
+            context['ai_analysis'] = self.object.ai_analysis
+            context['has_ai_analysis'] = True
+        except AttributeError:
+            context['ai_analysis'] = None
+            context['has_ai_analysis'] = False
+        
         return context
 
 
@@ -332,3 +350,101 @@ def view_pdf(request, pk):
         
     except FileNotFoundError:
         raise Http404("PDF file not found on disk")
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@login_required
+def trigger_ai_analysis(request, pk):
+    """API endpoint to trigger AI analysis for an MOU"""
+    try:
+        mou = get_object_or_404(MOU, pk=pk)
+        
+        # Import tasks here to avoid import issues
+        from .tasks import analyze_mou_with_ai
+        
+        # Check if analysis is already running
+        try:
+            if hasattr(mou, 'ai_analysis') and mou.ai_analysis.status == 'pending':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'AI analysis is already in progress for this MOU'
+                })
+        except:
+            pass  # No existing analysis
+        
+        # Trigger the analysis task
+        result = analyze_mou_with_ai.delay(mou.id)
+        
+        # Log activity
+        log_activity(
+            mou=mou,
+            action='ai_analysis_requested',
+            user=request.user,
+            ip_address=get_client_ip(request),
+            description="AI analysis manually triggered"
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'AI analysis has been started. This may take a few minutes.',
+            'task_id': result.id
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error starting AI analysis: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@login_required
+def bulk_ai_analysis(request):
+    """API endpoint to trigger AI analysis for all MOUs without analysis"""
+    try:
+        # Import tasks here to avoid import issues
+        from .tasks import analyze_mou_with_ai
+        
+        # Get MOUs without AI analysis that have PDF files
+        mous_to_analyze = MOU.objects.filter(
+            pdf_file__isnull=False,
+            ai_analysis__isnull=True
+        )[:50]  # Limit to 50 to avoid overwhelming the system
+        
+        if not mous_to_analyze:
+            return JsonResponse({
+                'success': True,
+                'message': 'No MOUs found that need AI analysis',
+                'count': 0
+            })
+        
+        # Trigger analysis for each MOU
+        task_ids = []
+        for mou in mous_to_analyze:
+            result = analyze_mou_with_ai.delay(mou.id)
+            task_ids.append(result.id)
+        
+        # Log activity
+        from .utils import log_activity, get_client_ip
+        log_activity(
+            mou=None,
+            action='bulk_ai_analysis_requested',
+            user=request.user,
+            ip_address=get_client_ip(request),
+            description=f"Bulk AI analysis started for {len(mous_to_analyze)} MOUs"
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'AI analysis started for {len(mous_to_analyze)} MOUs',
+            'count': len(mous_to_analyze),
+            'task_ids': task_ids
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error starting bulk AI analysis: {str(e)}'
+        }, status=500)

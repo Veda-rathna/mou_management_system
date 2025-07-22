@@ -134,3 +134,10 @@ class PartnerSubmission(models.Model):
 
     def __str__(self):
         return f"Submission by {self.partner_name} for {self.share_link.mou.title}"
+
+
+# Import AI models to make them available to Django
+try:
+    from .ai_models import *
+except ImportError:
+    pass  # AI models not available yet

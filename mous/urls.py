@@ -27,6 +27,10 @@ urlpatterns = [
     path('mous/<int:pk>/submissions/', views.mou_submissions, name='mou_submissions'),
     path('mous/<int:pk>/pdf/', views.view_pdf, name='view_pdf'),
     
+    # AI Analysis API
+    path('api/mous/<int:pk>/analyze/', views.trigger_ai_analysis, name='trigger_ai_analysis'),
+    path('api/bulk-analyze/', views.bulk_ai_analysis, name='bulk_ai_analysis'),
+    
     # Public signing interface
     path('sign/<uuid:token>/', views.mou_sign_view, name='mou_sign'),
 ]
